@@ -3,6 +3,8 @@
 My personal terminal setup for macOS — minimal Vesper-themed tmux, vim-style
 navigation, Ghostty as the host terminal.
 
+![tmux + Claude Code + neofetch](screenshots/tmux-claude-neofetch.png)
+
 ## Install
 
 ```bash
