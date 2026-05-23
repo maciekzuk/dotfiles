@@ -44,15 +44,20 @@ if [ -f "$FILE" ]; then
   done < "$FILE"
 fi
 
+DIM="#[fg=#4e4e4e]"
 parts=""
 if [ -n "$FIVE_H" ]; then
   pct="${FIVE_H%%|*}"
+  reset="${FIVE_H#*|}"
   parts="${LABEL}5h: $(color_for "$pct")${pct}"
+  [ -n "$reset" ] && [ "$reset" != "$FIVE_H" ] && parts="${parts} ${DIM}(${reset})"
 fi
 if [ -n "$SEVEN_D" ]; then
   pct="${SEVEN_D%%|*}"
+  reset="${SEVEN_D#*|}"
   [ -n "$parts" ] && parts="${parts}  "
   parts="${parts}${LABEL}7d: $(color_for "$pct")${pct}"
+  [ -n "$reset" ] && [ "$reset" != "$SEVEN_D" ] && parts="${parts} ${DIM}(${reset})"
 fi
 [ -z "$parts" ] && parts="–"
 
