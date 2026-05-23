@@ -19,12 +19,14 @@ backs up any existing files, and installs TPM.
 ## Status bar
 
 ```
-○ session   ▸ dir +ins -del   claude 5h:42% • 7d:8%   bat 90%   cpu 12%   ram 38%   2026-05-23  15:42
+○ session  ▸ dir +ins -del  claude 5h: 42%  7d: 8%  battery 90% ●  cpu 12%  ram 38%  2026-05-23 15:42
 ```
 
 - **Left** — session name. Filled circle (●) when prefix is active.
 - **Right** — cwd + git diff stats, Claude API usage (5h / 7d caps),
-  battery, cpu, ram, date/time.
+  battery (green dot ● when charging), cpu, ram, date/time.
+- Percentages are color-coded: green <60%, orange 60–84%, red ≥85%
+  (battery inverted: red ≤15%, orange ≤40%, green otherwise).
 
 ## Keybindings
 
