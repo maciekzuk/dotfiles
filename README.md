@@ -19,13 +19,16 @@ backs up any existing files, and installs TPM.
 ## Status bar
 
 ```
-○ session  ▸ dir +ins -del  claude 5h: 42% (2h 30m)  7d: 8% (4d 12h)  battery 90% ●  cpu 12%  ram 38%  2026-05-23 15:42
+○ session  Song Title — Artist  1:16 / 3:53  ▸ dir +ins -del  claude 5h: 42% (2h 30m)  7d: 8% (4d 12h)  battery 90% ●  cpu 12%  ram 38%  2026-05-23 15:42
 ```
 
 - **Left** — session name. Filled circle (●) when prefix is active.
-- **Right** — cwd + git diff stats, Claude API usage (5h / 7d caps,
-  with time-to-reset in parens), battery (green dot ● when charging),
-  cpu, ram, date/time.
+- **Right** — now-playing track, cwd + git diff stats, Claude API usage
+  (5h / 7d caps, with time-to-reset in parens), battery (green dot ● when
+  charging), cpu, ram, date/time.
+- **Now playing** — title, artist and `elapsed / total` for whatever
+  Music.app / Spotify is playing (dimmed when paused). Silent when nothing
+  is running; never launches a player.
 - Percentages are color-coded: green <60%, orange 60–84%, red ≥85%
   (battery inverted: red ≤15%, orange ≤40%, green otherwise).
 
@@ -81,6 +84,7 @@ Prefix: **`Ctrl+Space`**
 ├── scripts/             # status-bar helpers
 │   ├── dir-git-status.sh    # cwd + git stats
 │   ├── gitmux.sh            # gitmux wrapper
+│   ├── music.sh            # now-playing (Music.app / Spotify via AppleScript)
 │   ├── claude-usage.sh      # Claude API caps readout
 │   └── claude_usage_api.py  # background fetcher (writes /tmp cache)
 └── plugins/             # TPM-managed, git-ignored
