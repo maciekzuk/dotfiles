@@ -32,6 +32,79 @@ backs up any existing files, and installs TPM.
 - Percentages are color-coded: green <60%, orange 60–84%, red ≥85%
   (battery inverted: red ≤15%, orange ≤40%, green otherwise).
 
+## `net` widget — link speed and signal
+
+The `net` segment in `status-right` answers three questions at a glance:
+
+```
+net ↓1,2M ↑84K ▁▄█ -47 │ 115↓/38↑
+    └ live throughput  └ signal  └ last speedtest
+```
+
+- **Throughput** — byte-counter deltas from `netstat -ibn` on the default-route
+  interface, divided by the real elapsed time (tmux refreshes the bar off
+  schedule too). Brightness ramps with volume — dim when idle, white under
+  traffic, coral above 5 MB/s. Deliberately *not* the green/amber/red palette:
+  those mean healthy/unhealthy here, and 0 B/s at night is not a fault.
+  Columns are counted from the end (`$(NF-4)`, `$(NF-1)`) because the `<Link`
+  row for `ppp0`/`utun0` has no Address column — left-to-right indexing would
+  break exactly while the VPN is up.
+- **Signal** — three fixed cells plus dBm, thresholds identical to
+  `wifi-survey.sh` so the two never disagree. Shown whenever Wi-Fi is
+  associated, regardless of routing: on VPN the default route is `ppp0` but
+  you are still physically on Wi-Fi. Ethernet or radio off → it disappears.
+- **Speedtest** — appears only for 10 minutes after a measurement, then goes
+  away. A number parked there permanently would keep asserting that a
+  three-day-old reading is current; the full result with a timestamp lives in
+  `prefix + N → Szczegóły`.
+
+`prefix + N` opens the network menu: on-demand speedtest, connection details
+(band, channel, width, PHY, noise, SNR, link rate, SSID, gateway), and the
+room survey below. `prefix + W` toggles the segment like any other widget.
+
+RSSI arrives through `scripts/wifi-rssi-daemon.sh`, which keeps one long-lived
+sampler alive and writes each reading atomically to `/tmp/tmux-wifi-rssi`. The
+widget only stats and reads that file. This indirection is not optional: the
+`#!/usr/bin/env swift` shebang recompiles the sampler on **every** run — 2.6 s
+measured — so calling it once per second would freeze the status bar. The
+daemon starts lazily from the widget when the cache goes stale, so there is no
+install step and it recovers on its own.
+
+`scripts/net-speed.sh --self-test` checks the pure functions (byte formatting,
+dBm→bars mapping, expiry, division by a zero-length window, counter resets).
+
+## Wi-Fi survey
+
+`scripts/wifi-survey.sh` measures Wi-Fi signal room by room — carry the laptop
+around, type a room name, hit Enter, stand still for ten seconds. It stores
+median / min / max for that room and, on `q`, prints the rooms ranked
+best-to-worst into your scrollback.
+
+```bash
+scripts/wifi-survey.sh                     # 10 s per room
+scripts/wifi-survey.sh --window 20         # longer sample per room
+scripts/wifi-survey.sh --stats-test        # self-check of the maths
+```
+
+Median rather than mean, because dBm is logarithmic and one dropout would drag
+an average several dB. `min` matters more than the median for "does streaming
+survive here" — a room that typically sits at −55 but dips to −80 will stutter.
+
+Rough scale: `−50` and above excellent, `−60` good, `−67` usable, below `−75`
+barely works.
+
+Readings come from `scripts/wifi-rssi.swift`, a CoreWLAN sampler — **no sudo**.
+macOS 26 deleted the `airport` binary, `wdutil info` needs root, and
+`system_profiler SPAirPortDataType` takes 7–9 s per call because it rescans the
+whole neighbourhood, so CoreWLAN is the only fast, unprivileged source left.
+It needs `swift` (Xcode or Command Line Tools). The network *name* comes from
+`ipconfig` instead — SSID via CoreWLAN would require Location Services, while
+signal strength does not.
+
+The TUI is zsh, not bash, because its render loop needs sub-second non-blocking
+reads and macOS still ships bash 3.2, whose `read -t` rejects fractional
+timeouts.
+
 ## Keybindings
 
 Prefix: **`Ctrl+Space`**
@@ -50,6 +123,7 @@ Prefix: **`Ctrl+Space`**
 | `-` | Split vertically (preserves cwd) |
 | `c` | New window (preserves cwd) |
 | `b` | Toggle status bar |
+| `N` | Network menu — speedtest, connection details, room survey |
 | `r` | Reload config |
 
 ### Layouts
@@ -86,7 +160,12 @@ Prefix: **`Ctrl+Space`**
 │   ├── gitmux.sh            # gitmux wrapper
 │   ├── music.sh            # now-playing (Music.app / Spotify via AppleScript)
 │   ├── claude-usage.sh      # Claude API caps readout
-│   └── claude_usage_api.py  # background fetcher (writes /tmp cache)
+│   ├── claude_usage_api.py  # background fetcher (writes /tmp cache)
+│   ├── net-speed.sh            # widget: throughput, signal, fresh speedtest
+│   ├── net-ctl.sh              # prefix+N actions: speedtest / details / survey
+│   ├── wifi-rssi-daemon.sh     # keeps the sampler alive, writes the RSSI cache
+│   ├── wifi-survey.sh          # room-by-room Wi-Fi signal survey (zsh TUI)
+│   └── wifi-rssi.swift         # CoreWLAN RSSI sampler feeding wifi-survey.sh
 └── plugins/             # TPM-managed, git-ignored
 ```
 
