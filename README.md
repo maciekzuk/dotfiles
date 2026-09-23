@@ -61,6 +61,38 @@ Wiring lives **outside this repo** in `~/.claude/settings.json` (the `Stop` and
 `Notification` hooks call `~/.tmux/scripts/claude-tmux-notify.sh done|waiting`).
 The hook reads `$TMUX_PANE` to know which window/session to flag.
 
+## Claude usage dashboard
+
+`prefix + u` opens a popup over your local Claude Code transcripts — four tabs,
+same Vesper palette as the status bar:
+
+| Tab | Shows |
+|-----|-------|
+| `1` limits | 5h / 7d gauges, their history curve, burn rate and projected time-to-cap |
+| `2` hours | last 48 h as a braille curve, plus your average day hour by hour |
+| `3` days | GitHub-style calendar heatmap, daily bars, record day and streak |
+| `4` projects | top repos, model split, cache hit ratio, thinking share |
+
+Keys inside: `1`–`4` (or `Tab`) switch tabs, `m` cycles the metric, `[` / `]`
+change the range (7 / 30 / 90 days), `r` forces a full re-index, `q` quits.
+The view auto-refreshes every 10 s.
+
+**Metric.** Default is *weighted* tokens — output ×5, cache reads ×0.08,
+following the API price ratios — because raw totals are ~98% cache reads and
+drown out everything else. `m` switches to raw / output-only / message count.
+
+**Data.** History comes from `~/.claude/projects/**/*.jsonl`, deduplicated by
+`requestId`: resuming or forking a session copies earlier messages into the new
+transcript, which duplicates ~44% of entries and would nearly double every
+chart. The index is incremental — only the unread tail of a changed file is
+parsed — and cached in `~/.cache/tmux-claude-usage`: ~4 s on the first run,
+~50 ms after that.
+
+**Cap history.** Both writers of `/tmp/claude-usage.txt` only ever report
+"right now", so `claude-usage.sh` appends an `epoch,5h%,7d%` sample to
+`~/.claude/usage-history.log` at most once every 5 minutes. The limits curve
+fills in as those samples pile up; the rest of the dashboard works immediately.
+
 ## `net` widget — link speed and signal
 
 The `net` segment in `status-right` answers three questions at a glance:
@@ -167,6 +199,7 @@ Prefix: **`Ctrl+Space`**
 | Key | Action |
 |-----|--------|
 | `g` | Lazygit popup |
+| `u` | Claude usage dashboard |
 | `s` | Sesh — fuzzy session picker |
 | `F` | tmux-fzf |
 | `Space` | tmux-thumbs (Colemak homerow hints) |
@@ -193,12 +226,19 @@ Prefix: **`Ctrl+Space`**
 │   ├── claude_usage_api.py  # background fetcher (writes /tmp cache)
 │   ├── claude-tmux-notify.sh   # flags a window's dot + flash from Claude hooks
 │   ├── claude-other-sessions.sh # status-left dot when another session pends
-│   └── sesh-list-claude.sh     # colorizes the sesh picker by Claude state
+│   ├── sesh-list-claude.sh     # colorizes the sesh picker by Claude state
 │   ├── net-speed.sh            # widget: throughput, signal, fresh speedtest
 │   ├── net-ctl.sh              # prefix+N actions: speedtest / details / survey
 │   ├── wifi-rssi-daemon.sh     # keeps the sampler alive, writes the RSSI cache
 │   ├── wifi-survey.sh          # room-by-room Wi-Fi signal survey (zsh TUI)
 │   ├── wifi-rssi.swift         # CoreWLAN RSSI sampler feeding wifi-survey.sh
+│   └── usage/                  # prefix+u dashboard
+│       ├── dash.py                 # TUI: tabs, keys, layout, refresh loop
+│       ├── index.py                # incremental, deduplicated transcript index
+│       ├── charts.py               # braille / block / heatmap renderers
+│       ├── limits.py               # 5h/7d caps and their logged history
+│       ├── theme.py                # Vesper palette
+│       └── tests/                  # python3 -m unittest discover -s tests
 └── plugins/             # TPM-managed, git-ignored
 ```
 

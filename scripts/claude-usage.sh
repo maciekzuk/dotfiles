@@ -65,6 +65,22 @@ if [ -f "$FILE" ]; then
   done < "$FILE"
 fi
 
+# Sample the caps into an append-only log at most once every 5 minutes.
+# Neither writer keeps history, and the prefix + U dashboard needs a curve.
+HIST="$HOME/.claude/usage-history.log"
+if [ -n "$FIVE_H" ] || [ -n "$SEVEN_D" ]; then
+  if [ -f "$HIST" ]; then
+    hage=$(( $(date +%s) - $(stat -f %m "$HIST") ))
+  else
+    hage=9999
+  fi
+  if [ "$hage" -ge 300 ]; then
+    five="${FIVE_H%%|*}"
+    seven="${SEVEN_D%%|*}"
+    printf '%s,%s,%s\n' "$(date +%s)" "${five%\%}" "${seven%\%}" >> "$HIST"
+  fi
+fi
+
 DIM="#[fg=#4e4e4e]"
 parts=""
 if [ -n "$FIVE_H" ]; then
