@@ -1,2 +1,4 @@
 plugins/
 .claude/
+__pycache__/
+.antigravitycli/
