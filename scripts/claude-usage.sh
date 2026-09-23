@@ -16,6 +16,27 @@ if [ "$age" -gt "$MAX_AGE" ]; then
   touch "$FILE" 2>/dev/null
 fi
 
+# Reset timestamps arrive as epochs so the countdown stays fresh between
+# API refreshes (the cache is only rewritten every 10 minutes).
+human_left() {
+  case "$1" in
+    ''|*[!0-9]*) echo "$1"; return ;;   # already formatted by the statusline writer
+  esac
+  now=$(date +%s)
+  left=$(( $1 - now ))
+  [ "$left" -le 0 ] && return
+  d=$(( left / 86400 ))
+  h=$(( (left % 86400) / 3600 ))
+  m=$(( (left % 3600) / 60 ))
+  if [ "$d" -gt 0 ]; then
+    echo "${d}d ${h}h"
+  elif [ "$h" -gt 0 ]; then
+    echo "${h}h ${m}m"
+  else
+    echo "${m}m"
+  fi
+}
+
 # Pick a color for a percentage value: green < 60, orange 60–84, red ≥ 85.
 color_for() {
   n="${1%\%}"
@@ -50,14 +71,20 @@ if [ -n "$FIVE_H" ]; then
   pct="${FIVE_H%%|*}"
   reset="${FIVE_H#*|}"
   parts="${LABEL}5h: $(color_for "$pct")${pct}"
-  [ -n "$reset" ] && [ "$reset" != "$FIVE_H" ] && parts="${parts} ${DIM}(${reset})"
+  if [ "$reset" != "$FIVE_H" ]; then
+    left=$(human_left "$reset")
+    [ -n "$left" ] && parts="${parts} ${DIM}(${left})"
+  fi
 fi
 if [ -n "$SEVEN_D" ]; then
   pct="${SEVEN_D%%|*}"
   reset="${SEVEN_D#*|}"
   [ -n "$parts" ] && parts="${parts}  "
   parts="${parts}${LABEL}7d: $(color_for "$pct")${pct}"
-  [ -n "$reset" ] && [ "$reset" != "$SEVEN_D" ] && parts="${parts} ${DIM}(${reset})"
+  if [ "$reset" != "$SEVEN_D" ]; then
+    left=$(human_left "$reset")
+    [ -n "$left" ] && parts="${parts} ${DIM}(${left})"
+  fi
 fi
 [ -z "$parts" ] && parts="–"
 

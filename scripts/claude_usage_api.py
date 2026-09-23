@@ -34,6 +34,21 @@ def get_token_file():
     return None
 
 
+def to_epoch(v):
+    if isinstance(v, (int, float)):
+        return int(v)
+    if isinstance(v, str):
+        s = v.strip()
+        if s.isdigit():
+            return int(s)
+        try:
+            from datetime import datetime
+            return int(datetime.fromisoformat(s.replace("Z", "+00:00")).timestamp())
+        except Exception:
+            return None
+    return None
+
+
 def fetch_usage(token):
     req = urllib.request.Request(
         "https://api.anthropic.com/api/oauth/usage",
@@ -61,6 +76,7 @@ def main():
         return
 
     limits = {}
+    resets = {}
     for key, api_keys in [("5h", ["fiveHour", "five_hour"]), ("7d", ["sevenDay", "seven_day"])]:
         for ak in api_keys:
             val = data.get("usageLimit", {}).get(ak) or data.get(ak)
@@ -68,6 +84,9 @@ def main():
                 pct = val.get("utilizationPercent") or val.get("utilization_percent") or val.get("percent")
                 if pct is not None:
                     limits[key] = f"{int(round(float(pct)))}%"
+                    ep = to_epoch(val.get("resetsAt") or val.get("resets_at") or val.get("resetAt"))
+                    if ep:
+                        resets[key] = ep
                     break
             elif isinstance(val, (int, float)):
                 limits[key] = f"{int(round(float(val)))}%"
@@ -79,10 +98,10 @@ def main():
                 limits[k] = f"{data[k]}%"
 
     lines = []
-    if "5h" in limits:
-        lines.append(f"5h:{limits['5h']}")
-    if "7d" in limits:
-        lines.append(f"7d:{limits['7d']}")
+    for key in ("5h", "7d"):
+        if key in limits:
+            reset = resets.get(key)
+            lines.append(f"{key}:{limits[key]}" + (f"|{reset}" if reset else ""))
 
     if lines:
         with open(FILE_PATH, "w") as f:
