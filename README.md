@@ -123,6 +123,7 @@ Prefix: **`Ctrl+Space`**
 | `-` | Split vertically (preserves cwd) |
 | `c` | New window (preserves cwd) |
 | `b` | Toggle status bar |
+| `W` | Widgets menu — toggle individual status-right segments |
 | `N` | Network menu — speedtest, connection details, room survey |
 | `r` | Reload config |
 
