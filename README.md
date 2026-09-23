@@ -77,7 +77,7 @@ Prefix: **`Ctrl+Space`**
 ├── tmux.conf            # main config (symlinked to ~/.tmux.conf)
 ├── ghostty/config       # ghostty config (symlinked to ~/.config/ghostty/config)
 ├── install.sh           # setup script
-├── layouts/             # pane layout scripts (2col, 3col, dev)
+├── layouts/             # pane layout scripts (2, 3, 8, 8c, dev)
 ├── scripts/             # status-bar helpers
 │   ├── dir-git-status.sh    # cwd + git stats
 │   ├── gitmux.sh            # gitmux wrapper
