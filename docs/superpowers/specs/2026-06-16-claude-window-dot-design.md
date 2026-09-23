@@ -30,8 +30,8 @@ polling zawartości pane'ów (kruche).
 
 | Stan      | Hook         | Kolor               | Znaczenie         |
 |-----------|--------------|---------------------|-------------------|
-| `done`    | Stop         | koral `#ff8080`     | skończył, gotowe  |
-| `waiting` | Notification | żółty `#ffaf5f`     | czeka na Ciebie   |
+| `done`    | Stop         | zielony `#87d787`   | skończył, gotowe  |
+| `waiting` | Notification | pomarańcz `#ffaf5f` | czeka na Ciebie   |
 
 Jedna flaga `@claude-state`, ostatnie zdarzenie wygrywa. Kropka na **końcu**
 wpisu okna (`#I #W ●`). Wejście w okno czyści oba stany.
@@ -45,7 +45,7 @@ POSIX sh. Argument `done|waiting` (domyślnie `done`). Guardy: `$TMUX`,
 
 ### `tmux.conf` (zmiana)
 - `window-status-format` + warunkowa kropka:
-  `#I #W#{?@claude-state, #{?#{==:#{@claude-state},waiting},#[fg=#ffaf5f],#[fg=#ff8080]}●#[fg=#4e4e4e],}`
+  `#I #W#{?@claude-state, #{?#{==:#{@claude-state},waiting},#[fg=#ffaf5f],#[fg=#87d787]}●#[fg=#4e4e4e],}`
 - `set-hook -g pane-focus-in 'set -uw @claude-state'`
 - `window-status-current-format` bez zmian (aktywne okno nigdy nie dostaje flagi).
 
@@ -68,4 +68,45 @@ Notka o feature + że wiring hooków żyje w `~/.claude/settings.json` (poza rep
 1. `$TMUX_PANE` dostępny w hooku (echo do pliku z hooka testowego).
 2. Ręcznie: `tmux set -w -t <pane_w_tle> @claude-state done` → widać koral `●`.
    `... waiting` → żółta. Wejście w okno → znika.
-3. Realnie: Claude w pane w tle kończy → `●`; permission prompt → żółta `●`.
+3. Realnie: Claude w pane w tle kończy → `●`; permission prompt → pomarańcz `●`.
+
+## Addendum (2026-06-16) — kolory, skip, cross-session
+
+Po zatwierdzeniu designu doszły trzy zmiany:
+
+1. **Kolory:** `done` = zielony `#87d787`, `waiting` = pomarańcz `#ffaf5f`
+   (paleta jak color-pct: green/orange/red).
+2. **Skip logic:** kropkę pomijamy tylko gdy *realnie patrzysz* na pane —
+   `window_active=1 ORAZ session_attached≥1`. Sam `window_active` był błędny:
+   każda **odpięta** sesja ma swoje aktywne okno (`active=1`), więc Claude
+   kończący tam nigdy nie dostawał flagi. Teraz odpięte sesje dostają kropkę.
+3. **Cross-session notyfikacja (styl terminalowy):** kropka żyje tylko w
+   liście okien *bieżącej* sesji, więc hook dodatkowo robi **flash w
+   status-barze** (`tmux display-message -c <client>`) na **każdym podpiętym
+   kliencie**, z treścią `sesja:okno`. Widać go niezależnie od tego, w której
+   sesji siedzisz. Świadomie odrzucone: macOS-owe banery (osascript /
+   terminal-notifier) — user chce notyfikacji terminalowej, nie GUI.
+   Powiadomienie leci **zawsze** (niezależnie od skip kropki).
+
+## Addendum 2 (2026-06-16) — wskaźnik przy sesji + kolory w sesh
+
+Kropka żyje tylko w liście okien *bieżącej* sesji, więc doszły dwa sygnały
+oparte o tę samą flagę `@claude-state` (skan `tmux list-windows -a`):
+
+1. **Wskaźnik w `status-left`** (`scripts/claude-other-sessions.sh '#{client_session}'`)
+   — pojedyncza kropka obok nazwy sesji, gdy **inna** sesja (≠ bieżąca) ma
+   zaległego Claude'a. Pomarańcz jeśli gdziekolwiek `waiting`, inaczej zielony.
+   User wybrał "sama kropka" (nie nazwy/licznik).
+2. **Kolory w pickerze `sesh`** (`scripts/sesh-list-claude.sh`, binding `prefix+s`)
+   — `sesh list -t` przepuszczone przez kolorowanie ANSI (215=#ffaf5f,
+   114=#87d787). `fzf --ansi` zdejmuje kody z wyniku, więc `sesh connect`
+   dostaje czystą nazwę (zweryfikowane). Mapa stanów + lista sesh idą jednym
+   pipe'em do awk (rozdzielone markerem) — `awk -v` nie bierze wieloliniowych.
+
+Uwaga testowa: `display-message -p '#(...)'` NIE nadaje się do testu widgetów
+`#()` (nie czeka na job w tle — daje pusto nawet dla działającego `vpn.sh`).
+Weryfikacja przez analogię do istniejących widgetów + standalone.
+
+Potwierdzenie na żywo: realny Claude w `ediets:3` odpalił hook `Notification`,
+flaga `waiting` ustawiła się na właściwym oknie (czyli hook + `$TMUX_PANE`
+działają end-to-end).

@@ -32,6 +32,35 @@ backs up any existing files, and installs TPM.
 - Percentages are color-coded: green <60%, orange 60–84%, red ≥85%
   (battery inverted: red ≤15%, orange ≤40%, green otherwise).
 
+## Claude window dot
+
+A `●` appears next to a window in the window list when a Claude Code pane in
+that window needs attention:
+
+- **green ● `#87d787`** — Claude finished a task (`Stop` hook)
+- **orange ● `#ffaf5f`** — Claude is waiting for you, e.g. a permission prompt
+  (`Notification` hook)
+
+It clears the moment you focus the window (`pane-focus-in` hook). A window
+you're actively viewing (active window of an *attached* session) never gets a
+dot — `claude-tmux-notify.sh` skips it.
+
+**Cross-session:** the dot only shows in the *current* session's window list,
+so the same flag drives three more cross-session cues:
+
+- a tmux status-bar **flash** (`display-message`) on every attached client when
+  the hook fires, naming the `session:window` — pure tmux, no macOS banners;
+- a `●` next to the **session name** in `status-left` when *another* session
+  has a pending Claude (`claude-other-sessions.sh` — orange if any is waiting,
+  else green);
+- **`sesh` picker coloring** — `prefix + s` lists sessions with a pending Claude
+  in color (orange waiting / green done) via `sesh-list-claude.sh`, so you see
+  at a glance which one to jump to.
+
+Wiring lives **outside this repo** in `~/.claude/settings.json` (the `Stop` and
+`Notification` hooks call `~/.tmux/scripts/claude-tmux-notify.sh done|waiting`).
+The hook reads `$TMUX_PANE` to know which window/session to flag.
+
 ## `net` widget — link speed and signal
 
 The `net` segment in `status-right` answers three questions at a glance:
@@ -162,11 +191,14 @@ Prefix: **`Ctrl+Space`**
 │   ├── music.sh            # now-playing (Music.app / Spotify via AppleScript)
 │   ├── claude-usage.sh      # Claude API caps readout
 │   ├── claude_usage_api.py  # background fetcher (writes /tmp cache)
+│   ├── claude-tmux-notify.sh   # flags a window's dot + flash from Claude hooks
+│   ├── claude-other-sessions.sh # status-left dot when another session pends
+│   └── sesh-list-claude.sh     # colorizes the sesh picker by Claude state
 │   ├── net-speed.sh            # widget: throughput, signal, fresh speedtest
 │   ├── net-ctl.sh              # prefix+N actions: speedtest / details / survey
 │   ├── wifi-rssi-daemon.sh     # keeps the sampler alive, writes the RSSI cache
 │   ├── wifi-survey.sh          # room-by-room Wi-Fi signal survey (zsh TUI)
-│   └── wifi-rssi.swift         # CoreWLAN RSSI sampler feeding wifi-survey.sh
+│   ├── wifi-rssi.swift         # CoreWLAN RSSI sampler feeding wifi-survey.sh
 └── plugins/             # TPM-managed, git-ignored
 ```
 
